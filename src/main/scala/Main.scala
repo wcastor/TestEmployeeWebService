@@ -19,7 +19,7 @@ object Main extends StreamApp[IO] with Http4sDsl[IO] {
       _          <- Http1Client.stream[IO]()
       exitCode <- BlazeBuilder[IO]
                    .bindHttp(config.serverConfig.port, config.serverConfig.host)
-                   .mountService(new EmployeeHttpEndpoint(new EmployeeRepoImpl(transactor)).service, "/")
+                   .mountService(new EmployeeHttpEndpoint(new EmployeeRepoImpl(transactor), config.api).service, "/")
                    .serve
     } yield exitCode
 }
