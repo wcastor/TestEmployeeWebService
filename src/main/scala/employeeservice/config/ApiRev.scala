@@ -1,3 +1,3 @@
 package employeeservice.config
 
-case class ApiRev (apiPrefix: String, apiVersion: Int)
+case class ApiRev (apiPrefix: String, apiVersion: Double)

@@ -10,7 +10,7 @@ object AppConfig {
   def load(): IO[AppConfig] =
     for {
       serverConf <- parser.decodePathF[IO, ServerConfig]("server")
-      api <- parser.decodePathF[IO, ApiRev]("api")
+      api        <- parser.decodePathF[IO, ApiRev]("api")
       dbConf     <- parser.decodePathF[IO, DBConfig]("database")
     } yield AppConfig(serverConf, dbConf, api)
 }

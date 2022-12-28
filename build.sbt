@@ -2,8 +2,6 @@ name := "TestEmployeeWebService"
 
 version := "0.1"
 
-resolvers += Resolver.sonatypeRepo("snapshots")
-
 scalaVersion := "2.12.17"
 
 val Http4sVersion      = "0.18.4"
