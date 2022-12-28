@@ -45,6 +45,6 @@ class EmployeeRepoImpl(xa: Transactor[IO]) extends EmployeeRepo[Employee] {
         case Left(err)       => Left(err)
       }
 
-  override def getAll(): IO[List[Employee]] =
+  override def getAll: IO[List[Employee]] =
     EmployeeSQL.getAllWithLimit.to[List].transact(xa)
 }

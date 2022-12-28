@@ -1,25 +1,40 @@
-import cats.effect.IO
+import cats.data.Kleisli
+import cats.effect.{ ExitCode, IO, IOApp }
+import doobie.util.transactor.Transactor
 import employeeservice.config.{ AppConfig, DBConfig }
 import employeeservice.logic.db.EmployeeRepoImpl
 import employeeservice.logic.httpendpoint.EmployeeHttpEndpoint
-import fs2.StreamApp.ExitCode
-import fs2.{ Stream, StreamApp }
-import org.http4s.client.blaze.Http1Client
+import fs2.Stream
 import org.http4s.dsl.Http4sDsl
-import org.http4s.server.blaze.BlazeBuilder
+import org.http4s.implicits.http4sKleisliResponseSyntaxOptionT
+import org.http4s.server.Router
+import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.{ Request, Response }
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-object Main extends StreamApp[IO] with Http4sDsl[IO] {
-  override def stream(args: List[String], requestShutdown: IO[Unit]): Stream[IO, ExitCode] =
-    for {
+object Main extends IOApp with Http4sDsl[IO] {
+
+  def makeRouter(transactor: Transactor[IO], config: AppConfig): Kleisli[IO, Request[IO], Response[IO]] = {
+    val routes = new EmployeeHttpEndpoint(new EmployeeRepoImpl(transactor), config.api).routes
+    Router[IO](
+      "/" -> routes
+    ).orNotFound
+  }
+
+  def serveStream(transactor: Transactor[IO], appConfig: AppConfig): Stream[IO, ExitCode] =
+    BlazeServerBuilder[IO](global)
+      .bindHttp(appConfig.serverConfig.port, appConfig.serverConfig.host)
+      .withHttpApp(makeRouter(transactor, appConfig))
+      .serve
+
+  override def run(args: List[String]): IO[ExitCode] = {
+    val stream = for {
       config     <- Stream.eval(AppConfig.load())
-      transactor <- Stream.eval(DBConfig.transactor(config.dbConfig))
+      transactor <- Stream.eval(DBConfig.transactor(config.dbConfig, global))
       _          <- Stream.eval(DBConfig.init(transactor))
-      _          <- Http1Client.stream[IO]()
-      exitCode <- BlazeBuilder[IO]
-                   .bindHttp(config.serverConfig.port, config.serverConfig.host)
-                   .mountService(new EmployeeHttpEndpoint(new EmployeeRepoImpl(transactor), config.api).service, "/")
-                   .serve
+      exitCode   <- serveStream(transactor, config)
     } yield exitCode
+    stream.compile.drain.as(ExitCode.Success)
+  }
 }
