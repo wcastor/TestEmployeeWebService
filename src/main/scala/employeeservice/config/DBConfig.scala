@@ -18,9 +18,7 @@ object DBConfig {
     config.setPassword(dbConfig.password)
     config.setMaximumPoolSize(dbConfig.poolSize)
 
-    val transactor: IO[HikariTransactor[IO]] =
-      IO.pure(HikariTransactor.apply[IO](new HikariDataSource(config), ec))
-    transactor
+    IO.pure(HikariTransactor.apply[IO](new HikariDataSource(config), ec))
   }
 
   def init(transactor: HikariTransactor[IO]): IO[Unit] =
